@@ -3,13 +3,15 @@ CREATE TYPE estados AS ENUM ('PB', 'PE', 'RN', 'MA', 'BA', 'SE', 'CE', 'AL', 'PI
 CREATE TABLE farmacia(
     bairro VARCHAR(10),
     cidade VARCHAR(20),
+    -- não é necessario verificar se o valor fornecido é valido ou não pois o enum so aceita valores que estão dentro do conjunto
     estado estados,
     id_farmacia SERIAL PRIMARY KEY,
-    tipo CHAR(1),
-    gerente CHAR(11),
-    tipo_gerente CHAR(1),
+    tipo CHAR(1) NOT NULL,
+    gerente CHAR(11) NOT NULL,
+    tipo_gerente CHAR(1) NOT NULL,
 
     CONSTRAINT tipo_check CHECK(tipo='S' OR tipo='F'),
+
     CONSTRAINT fk_farmacia FOREIGN KEY(gerente, tipo_gerente) REFERENCES funcionario(cpf, tipo),
     CONSTRAINT tipo_gerente_check CHECK(tipo_gerente='A' OR tipo_gerente='F'),
     CONSTRAINT gerente_unique UNIQUE(gerente),
@@ -22,7 +24,7 @@ CREATE TABLE farmacia(
 CREATE TABLE funcionario(
     nome VARCHAR(30),
     cpf CHAR(11) PRIMARY KEY,
-    tipo CHAR(1),
+    tipo CHAR(1) NOT NULL,
     id_farmacia SERIAL,
 
     CONSTRAINT fk_funcionario FOREIGN KEY (id_farmacia) REFERENCES farmacia(id_farmacia),
@@ -36,35 +38,39 @@ ALTER TABLE funcionario ALTER COLUMN id_farmacia DROP NOT NULL;
 
 CREATE TABLE medicamento(
     nome CHAR(30) PRIMARY KEY,
-    vende_com_receita BOOLEAN
+    valor FLOAT,
+    vende_com_receita BOOLEAN NOT NULL,
 
     CONSTRAINT nome_venda_com_receita_unique UNIQUE(nome, vende_com_receita)
 );
 
 CREATE TABLE venda(
     id_venda SERIAL,
-    cpf_cliente CHAR(11),
-    cpf_vendedor CHAR(11),
-    tipo_vendedor CHAR(1),
-    id_medicamento CHAR(30),
-    venda_com_receita BOOLEAN,
+    cpf_cliente CHAR(11) NOT NULL,
+    cpf_vendedor CHAR(11) NOT NULL,
+    tipo_vendedor CHAR(1) NOT NULL,
+    id_medicamento CHAR(30) NOT NULL,
+    venda_com_receita BOOLEAN NOT NULL,
+    valor FLOAT,
 
 
     CONSTRAINT fk_venda_cpf_cliente FOREIGN KEY (cpf_cliente) REFERENCES cliente(cpf),
     CONSTRAINT fk_venda_cpf_vendedor FOREIGN KEY (cpf_vendedor, tipo_vendedor) REFERENCES funcionario(cpf, tipo) ON DELETE RESTRICT,
     CONSTRAINT tipo_vendedor_check CHECK(tipo_vendedor='V'),
-    CONSTRAINT fk_venda_medicamento FOREIGN KEY (id_medicamento, venda_com_receita) REFERENCES medicamento(nome, vende_com_receita),
-    CONSTRAINT receita_cliente_check CHECK(venda_com_receita = 'true' AND cpf_cliente IS NOT NULL)
+    CONSTRAINT fk_venda_medicamento FOREIGN KEY (id_medicamento, venda_com_receita) REFERENCES medicamento(nome, vende_com_receita) ON DELETE RESTRICT,
+    CONSTRAINT receita_cliente_check CHECK(venda_com_receita = 'true' AND cpf_cliente IS NOT NULL),
+    --pelo fato de existir dois atributos serial em entrega
+    CONSTRAINT id_venda_unique UNIQUE(id_venda)
 
 );
 
 CREATE TABLE entrega(
-    rua_endereco CHAR(30),
-    numero_endereco INT,
-    bairro_endereco VARCHAR(10),
+    -- na relação tabela já tem cliente então não é necessario guardar essa informação aqui
+    id_endereco SERIAL,
+    id_venda SERIAL,
 
-    CONSTRAINT fk_entrega FOREIGN KEY (rua_endereco, numero_endereco, bairro_endereco) REFERENCES cliente_endereco(rua, numero, bairro)
-
+    CONSTRAINT fk_entrega FOREIGN KEY (id_endereco) REFERENCES cliente_endereco(id),
+    CONSTRAINT fk_entrega_venda FOREIGN KEY (id_venda) REFERENCES venda(id_venda)
 );
 
 CREATE TABLE cliente(
@@ -78,15 +84,15 @@ CREATE TABLE cliente(
 );
 
 CREATE TABLE cliente_endereco(
-    bairro VARCHAR(10),
-    cidade VARCHAR(20),
-    rua CHAR(30),
-    numero INT,
-    tipo CHAR(1),
+    id SERIAL PRIMARY KEY,
+    bairro VARCHAR(10) NOT NULL,
+    cidade VARCHAR(20) NOT NULL,
+    rua CHAR(30) NOT NULL,
+    numero INT NOT NULL,
+    tipo CHAR(1) NOT NULL,
     --pelo fato de não puder cadastrar entregas sem um cliente cadastrado
     id_cliente CHAR(11) NOT NULL,
 
-    CONSTRAINT pk_cliente_endereco PRIMARY KEY(rua, numero, bairro),
     CONSTRAINT fk_cliente_endereco FOREIGN KEY (id_cliente) REFERENCES cliente(cpf),
     CONSTRAINT tipo_cliente_endereco CHECK(tipo='R' OR tipo='T' OR tipo='O')
 
