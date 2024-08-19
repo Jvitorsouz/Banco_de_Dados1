@@ -147,8 +147,8 @@ ORDER BY qtd_supervisionados ASC;
         ```sql
         SELECT MIN(count) AS qtd 
         FROM (SELECT COUNT(*) 
-        			FROM works_on 
-        			GROUP BY pno) AS subconsulta;
+        	FROM works_on 
+        GROUP BY pno) AS subconsulta;
         ```
         
 
@@ -161,9 +161,9 @@ SELECT pno, COUNT(*)
 FROM works_on 
 GROUP BY pno 
 HAVING COUNT(*) = (SELECT MIN(count) 
-										FROM (SELECT COUNT(*) 
-													FROM works_on 
-													GROUP BY pno) AS subconsulta) 
+			FROM (SELECT COUNT(*) 
+				FROM works_on 
+				GROUP BY pno) AS subconsulta) 
 ORDER BY pno ASC;
 ```
 
@@ -188,4 +188,114 @@ ORDER BY pno ASC;
      SELECT W.pno AS Num_proj, AVG(E.salary) AS media_sal 
      FROM works_on W JOIN employee E ON W.essn = E.ssn 
      GROUP BY W.pno;
+    ```
+    
+
+---
+
+9. **Alterar a consulta anterior para retornar também os nomes dos projetos:**
+    
+    ```sql
+    SELECT W.pno AS Num_proj, P.pname AS proj_name, AVG(E.salary) AS media_sal 
+    FROM (works_on W JOIN employee E ON W.essn = E.ssn) --PRIMEIRA JUNÇÃO
+    JOIN project P ON W.pno = P.pnumber -- SEGUNDA JUNÇÃO COM O RESULTADO DA PRIMEIRA JUNÇÃO
+    GROUP BY W.pno, P.pname;
+    ```
+    
+    - Os nomes do projetos estão na tabela Project uma vez que eu tenho o numero de projeto na minha relação da questão anterior, basta eu fazer um JOIN do resultado anterior com a tabela project com a condicao de junção de fkey para pkey
+    - OBS: Ao declarar no select que eu tbm quero o nome do projeto e uma vez que ela não faz parte da relação onde a função de agregação está sendo atribuida ao atributo  é necessário declarar o pname na cláusula `GROUP BY`
+
+---
+
+10. **Observe que o projeto 92 tem a maior média salarial. Faça uma consulta para retornar os funcionários que não trabalham neste projeto mas que possuam salário maior do que todos os funcionários que trabalham neste projeto. Basta retornar o primeiro nome e o salário destes funcionários. O numero 92 pode aparecer na consulta:**
+    
+    ```sql
+    SELECT E.fname, E.salary 
+    FROM employee E 
+    WHERE E.salary  > ALL (SELECT S.salary 
+    				FROM works_on W 
+    				JOIN Employee S ON S.ssn = W.essn AND W.pno = '92');
+    ```
+    
+    - Primeiro precisamos saber quais são todos os salarios do funcionarios que trabalham no projeto ‘92’, juntando works_on com employee conseguimos pegar todos os funcionarios o essn de works_on é igual a o ssn de employee `AND` pnum é igual a 92, sendo esta ultima uma condição de filtragem
+    - Tendo uma vez os salarios em mãos, que sera resultado de uma consulta agora precisamos apenas dos nomes e salarios do funcionarios que tenham seu salario maior que `ALL(todos)` os salarios presentes na subconsulta
+
+---
+
+11. **Retornar a quantidade de projeto por funcionário, ordenado pela quantidade:**
+    
+    ```sql
+    SELECT E.ssn, COUNT(W.pno) 
+    FROM works_on W RIGHT JOIN employee E 
+    ON W.essn = E.ssn -- CONDIÇÃO DE JUNÇÃO
+    GROUP BY E.ssn 
+    ORDER BY COUNT(W.pno);
+    ```
+    
+    - Como precisamos saber o numero de projeto para todos os funcionários presentes em employee, por mais que works_on guarde o ssn do funcionario, vai existir funcionarios sem projetos que precisam ser listados também.
+    - Para isso é necessário fazer um `RIGHT JOIN` com employee a direita para as tuplas onde a condição for `NULL` ser consideradas.
+    - O `COUNT` precisa ser com `W.pno` uma vez que vai existir funcionarios sem projetos.
+
+---
+
+12. **Retornar a quantidade de funcionários por projeto (incluindo os funcionarios sem projeto) retornar apenas os projetos que possuem menos de 5 funcionarios, orderna pela quantidade.**
+    
+    ```sql
+    SELECT pno, count 
+    FROM (SELECT W.pno, COUNT(*) 
+    		FROM employee E LEFT JOIN works_on W 
+    		ON E.ssn = W.essn GROUP BY W.pno) AS sub 
+    WHERE count < 5 ORDER BY count;
+    ```
+    
+    - Primeiro precisamos achar a quantidade de funcionarios por cada projeto, isso vai resultar em uma consulta interna
+    - Depois precisamos filtrar em uma consulta externa onde as contagens de funcionarios por projeto é menor que 5
+
+---
+
+13. **Usando consultas aninhadas e sem usar junções, formule uma consulta para retornar os primeiros nomes dos funcionários que trabalham no(s) projetos localizados em ‘Sgarland’ e que possuem dependentes**
+    
+    1. Primeiro retornar o numero projeto cujo a localização é em `‘Sugarland’`
+    
+    ```sql
+    SELECT pnumber 
+    FROM project 
+    WHERE plocation = 'Sugarland';
+    ```
+    
+    1. Retornar agora os essn dos projetos cujo o pno é igual a consulta anterior
+    
+    ```sql
+    SELECT essn 
+    FROM works_on 
+    WHERE pno = (SELECT pnumber 
+     		 FROM project 
+    		 WHERE plocation = 'Sugarland');
+    ```
+    
+    1. Retonar o essn em dependent que estão presentes na consulta anterior
+    
+    ```sql
+    	SELECT DISTINCT essn
+    	 FROM dependent 
+    	 WHERE essn IN (SELECT essn 
+    			FROM works_on 
+    			WHERE pno = (SELECT pnumber 													     FROM project
+    				     WHERE plocation = 'Sugarland'));
+    
+    ```
+    
+    1. Por ultimo retornar o primeiro nome dos funcionarios que o ssn está na ultima consulta
+    
+    ```sql
+    SELECT fname 
+    FROM employee 
+    WHERE ssn IN (SELECT DISTINCT essn 
+    		  FROM dependent 
+    		   WHERE essn IN (SELECT essn 
+    				  FROM works_on 
+    				  WHERE pno = (SELECT pnumber 
+				  	       FROM project
+    					       WHERE plocation = 'Sugarland')));
+    
     ```
