@@ -1,11 +1,9 @@
-# ROTEIRO 5
+# ROTEIRO 5 - EXPLICAÇÃO
 
 1. **Retorne quantas funcionárias estão cadastradas:**
 
 ```sql
-SELECT COUNT(*) 
-FROM employee 
-WHERE sex='F';
+SELECT COUNT(*) FROM employee WHERE sex='F';
 ```
 
 - Como employee guarda a o sex do funcionario para diferenciar de masculinos para feminino podemos usar uma função de agregação para contar todas * as tuplas de employee onde o sex é igual a F.
@@ -15,9 +13,7 @@ WHERE sex='F';
 2. **Retornar a média de salário dos funcionários homens que moran no estado do Texas (TX)**
 
 ```sql
-SELECT AVG(salary) 
-FROM employee 
-WHERE sex='M' AND address LIKE '%TX';
+SELECT AVG(salary) FROM employee WHERE sex='M' AND address LIKE '%TX';
 ```
 
 - `AVG` → Retorna a media de todos os salarios cujo a condição where é verdadeira.
@@ -66,62 +62,62 @@ WHERE sex='M' AND address LIKE '%TX';
     
     </aside>
     
-    `Primeira solução corrigida:`
+
+`Primeira solução corrigida:`
+
+```sql
+SELECT S.ssn AS ssn_supervisor, COUNT(*) AS qtd_supervisionados 
+FROM employee S RIGHT JOIN employee E ON S.ssn = E.superssn 
+GROUP BY S.ssn 
+ORDER BY COUNT(*) ASC;
+```
+
+- Logo nessa solução os funcionarios com superssn NULL vão ser inclusos na saída.
+
+### Porque usar `JOIN` e não uma claúsula `WHERE`:
+
+`Possível solução com WHERE:`
+
+```sql
+SELECT S.ssn, COUNT(*) 
+FROM employee E, employee S 
+WHERE S.ssn = E.superssn 
+GROUP BY S.ssn 
+ORDER BY COUNT(*);
+```
+
+- A condição `WHERE S.ssn = E.superssn` funciona como um **INNER JOIN implícito**. Isso significa que a consulta retorna apenas os resultados onde há uma correspondência exata entre `S.ssn`  e `E.superssn`
+- Assim, a consulta só trará supervisores que estão de fato supervisionando algum funcionário, porque a condição `WHERE` filtra as linhas sem correspondência.
+
+### Solução `SEM RIGHT JOIN`:
+
+```sql
+SELECT superssn AS ssn_supervisor, COUNT (*) AS qtd_supervisionados 
+FROM employee 
+GROUP BY superssn 
+ORDER BY qtd_supervisionados ASC;
+```
+
+### Por que não precisa de `JOIN`:
+
+- **Tudo está em uma única tabela**: A própria tabela `employee` já contém todas as informações para fazer a contagem. Cada linha tem tanto o SSN do empregado quanto o SSN do supervisor (na coluna `superssn`).
+- **`JOIN` seria desnecessário**: Como o relacionamento entre empregados e supervisores está contido dentro da própria tabela (através da coluna `superssn`), não há necessidade de `JOIN` com outra tabela.
+
+---
+
+4. **Para cada funcionário que supervisiona alguem, retornar seu nome e a quantidade de funcionários que supervisiona. O resultado deve ser ordenado pela quantidade de funcionários supervisionados. Não é permitido cáusula WHERE**
     
     ```sql
-    SELECT S.ssn AS ssn_supervisor, COUNT(*) AS qtd_supervisionados 
-    FROM employee S RIGHT JOIN employee E ON S.ssn = E.superssn 
-    GROUP BY S.ssn 
-    ORDER BY COUNT(*) ASC;
-    ```
-    
-    - Logo nessa solução os funcionarios com superssn NULL vão ser inclusos na saída.
-    
-    ### Porque usar `JOIN` e não uma claúsula `WHERE`:
-    
-    `Possível solução com WHERE:`
-    
-    ```sql
-    SELECT S.ssn, COUNT(*) 
-    FROM employee E, employee S 
-    WHERE S.ssn = E.superssn 
-    GROUP BY S.ssn 
+    SELECT S.fname, COUNT(*) 
+    FROM employee S JOIN employee E ON S.ssn = E.superssn 
+    GROUP BY S.fname 
     ORDER BY COUNT(*);
     ```
     
-    - A condição `WHERE S.ssn = E.superssn` funciona como um **INNER JOIN implícito**. Isso significa que a consulta retorna apenas os resultados onde há uma correspondência exata entre `S.ssn`  e `E.superssn`
-    - Assim, a consulta só trará supervisores que estão de fato supervisionando algum funcionário, porque a condição `WHERE` filtra as linhas sem correspondência.
-    
-    ### Solução `SEM RIGHT JOIN`:
-    
-    ```sql
-    SELECT superssn AS ssn_supervisor, COUNT (*) AS qtd_supervisionados 
-    FROM employee 
-    GROUP BY superssn 
-    ORDER BY qtd_supervisionados ASC;
-    ```
-    
-    ### Por que não precisa de `JOIN`:
-    
-    - **Tudo está em uma única tabela**: A própria tabela `employee` já contém todas as informações para fazer a contagem. Cada linha tem tanto o SSN do empregado quanto o SSN do supervisor (na coluna `superssn`).
-    - **`JOIN` seria desnecessário**: Como o relacionamento entre empregados e supervisores está contido dentro da própria tabela (através da coluna `superssn`), não há necessidade de `JOIN` com outra tabela.
+    - Como queremos cada funcionario e quantidade de funcionatios que ele supervisiona, a `função join` junta o funcionario ao seu supervisor, e precisamos fazer a contagem de todas essas ocorrências agrupando pelo o nome do funcionario.
     
     ---
     
-  4. **Para cada funcionário que supervisiona alguem, retornar seu nome e a quantidade de funcionários que supervisiona. O resultado deve ser ordenado pela quantidade de funcionários supervisionados. Não é permitido cáusula WHERE**
-        
-        ```sql
-        SELECT S.fname, COUNT(*) 
-        FROM employee S JOIN employee E ON S.ssn = E.superssn 
-        GROUP BY S.fname 
-        ORDER BY COUNT(*);
-        ```
-        
-        - Como queremos cada funcionario e quantidade de funcionatios que ele supervisiona, a `função join` junta o funcionario ao seu supervisor, e precisamos fazer a contagem de todas essas ocorrências agrupando pelo o nome do funcionario.
-        
-        ---
-        
-
 5. **Faça uma consulta equivalente à anterior, porém considerando os funcionários que não possuem supervisor, Não deve também ter cláusula WHERE**
     
     ```sql
@@ -182,7 +178,7 @@ ORDER BY pno ASC;
 
 ---
 
-8. Retornar  a média salarial por projeto:
+8. **Retornar  a média salarial por projeto:**
     
     1. Queremos a média salarial por projeto, uma vez que na tabela works_on armazena tanto o ssn do funcionário e o n° do projeto, e o salario do funcionario está na tabela employee, precisamos fazendo uma junção de works_on com employee a partir da igualdade do ssn
     
